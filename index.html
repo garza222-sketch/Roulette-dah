@@ -3,36 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>المحلل الاستراتيجي المزدوج V9</title>
+    <title>المحلل الاستراتيجي المزدوج - النسخة المصححة</title>
     <style>
         :root { --gold: #d4af37; --dark: #0a0a0a; --panel: #161616; --green: #2ecc71; --red: #e74c3c; --blue: #3498db; }
         body { background: var(--dark); color: white; font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; padding: 10px; margin: 0; }
         .app-container { border: 2px solid var(--gold); background: var(--panel); border-radius: 20px; padding: 15px; width: 100%; max-width: 380px; box-shadow: 0 20px 50px rgba(0,0,0,0.9); }
         
         .decision-box { 
-            background: linear-gradient(145deg, #000, #111); border: 3px solid var(--blue); border-radius: 15px; padding: 20px; 
-            text-align: center; margin-bottom: 15px; box-shadow: 0 0 20px rgba(52, 152, 219, 0.2);
+            background: #000; border: 3px solid var(--blue); border-radius: 15px; padding: 20px; 
+            text-align: center; margin-bottom: 15px; transition: 0.3s;
         }
         .decision-title { font-size: 0.85em; color: #888; margin-bottom: 8px; }
-        .decision-value { font-size: 1.6em; font-weight: bold; color: white; line-height: 1.4; }
+        .decision-value { font-size: 1.5em; font-weight: bold; color: white; }
 
-        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 15px; }
-        .stat-card { background: #222; padding: 10px; border-radius: 10px; text-align: center; border: 1px solid #333; }
-        .label { font-size: 0.7em; color: #aaa; display: block; }
-        .value { font-size: 1em; font-weight: bold; color: var(--gold); }
-
-        .profit-bar { text-align: center; font-size: 1.6em; font-weight: bold; margin: 10px 0; font-variant-numeric: tabular-nums; }
+        .profit-bar { text-align: center; font-size: 1.6em; font-weight: bold; margin: 10px 0; color: var(--green); }
 
         .input-section { display: flex; gap: 8px; margin-bottom: 15px; }
         input { flex: 1; padding: 15px; border-radius: 12px; border: 1px solid #444; background: #000; color: var(--gold); font-size: 1.4em; text-align: center; outline: none; }
-        input:focus { border-color: var(--gold); }
         .btn-add { background: var(--gold); color: black; font-weight: bold; border: none; border-radius: 12px; padding: 0 25px; cursor: pointer; font-size: 1.1em; }
+        .btn-add:active { transform: scale(0.95); background: #b8962d; }
 
         .action-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
         .btn-win { background: var(--green); color: white; border: none; padding: 14px; border-radius: 10px; font-weight: bold; cursor: pointer; }
         .btn-loss { background: var(--red); color: white; border: none; padding: 14px; border-radius: 10px; font-weight: bold; cursor: pointer; }
 
-        .history-tag { font-size: 0.75em; color: #555; text-align: center; background: #000; padding: 6px; border-radius: 8px; border: 1px solid #222; }
+        .history-tag { font-size: 0.8em; color: #666; text-align: center; background: #000; padding: 8px; border-radius: 8px; min-height: 20px; }
     </style>
 </head>
 <body>
@@ -40,18 +35,13 @@
 <div class="app-container">
     <div class="decision-box" id="decisionDisplay">
         <div class="decision-title">التوقع المزدوج الموزون:</div>
-        <div class="decision-value" id="nextMove">بانتظار 5 جولات</div>
+        <div class="decision-value" id="nextMove">أدخل 5 أرقام</div>
     </div>
 
     <div class="profit-bar" id="profitVal">0.00</div>
 
-    <div class="stats-grid">
-        <div class="stat-card"><span class="label">قوة التوقع</span><span class="value" id="strengthVal">--</span></div>
-        <div class="stat-card"><span class="label">توصية المخاطرة</span><span class="value" id="kellyVal">0%</span></div>
-    </div>
-
     <div class="input-section">
-        <input type="number" id="numIn" placeholder="الرقم" inputmode="numeric">
+        <input type="number" id="numIn" placeholder="الرقم" inputmode="numeric" onkeydown="if(event.key==='Enter') pushData()">
         <button class="btn-add" onclick="pushData()">سجل</button>
     </div>
 
@@ -60,20 +50,26 @@
         <button class="btn-loss" onclick="updateMoney(false)">خسارة ❌</button>
     </div>
 
-    <div class="history-tag" id="hist"></div>
-    <button style="width:100%; background:none; border:none; color:#333; font-size:0.6em; margin-top:10px; cursor:pointer;" onclick="if(confirm('تصفير؟')){localStorage.clear(); location.reload();}">تصفير الجلسة</button>
+    <div class="history-tag" id="hist">السجل: فارغ</div>
+    <button style="width:100%; background:none; border:none; color:#444; font-size:0.7em; margin-top:15px; text-decoration:underline; cursor:pointer;" onclick="clearAll()">تصفير شامل للبيانات</button>
 </div>
 
 <script>
     const REDS = [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36];
-    let state = JSON.parse(localStorage.getItem('roulette_v9')) || { history: [], profit: 0 };
+    // استخدام مفتاح جديد تماماً لضمان عدم حدوث تضارب
+    let state = JSON.parse(localStorage.getItem('roulette_v10_final')) || { history: [], profit: 0 };
 
     function pushData() {
-        const input = document.getElementById('numIn');
-        const val = parseInt(input.value);
-        if (isNaN(val) || val < 0 || val > 36) return;
+        const inputElem = document.getElementById('numIn');
+        const val = parseInt(inputElem.value);
+        
+        if (isNaN(val) || val < 0 || val > 36) {
+            return;
+        }
+        
         state.history.push(val);
-        input.value = "";
+        inputElem.value = "";
+        inputElem.focus();
         refresh();
     }
 
@@ -91,72 +87,84 @@
     }
 
     function refresh() {
-        localStorage.setItem('roulette_v9', JSON.stringify(state));
+        localStorage.setItem('roulette_v10_final', JSON.stringify(state));
         const hist = state.history;
         const total = hist.length;
 
+        // تحديث الربح
         const pDisp = document.getElementById('profitVal');
         pDisp.innerText = state.profit.toFixed(2);
         pDisp.style.color = state.profit >= 0 ? "#2ecc71" : "#e74c3c";
 
         if (total < 5) {
-            document.getElementById('nextMove').innerText = `باقي ${5 - total} جولات`;
+            document.getElementById('nextMove').innerText = `بانتظار ${5 - total} أرقام`;
             return;
         }
 
-        const isEven = (n) => n !== 0 && n % 2 === 0;
-        const isOdd = (n) => n !== 0 && n % 2 !== 0;
-        const isRed = (n) => REDS.includes(n);
-        const isBlack = (n) => n !== 0 && !REDS.includes(n);
+        // منطق التحليل الموزون
+        const isEven = n => n !== 0 && n % 2 === 0;
+        const isOdd = n => n !== 0 && n % 2 !== 0;
+        const isRed = n => REDS.includes(n);
+        const isBlack = n => n !== 0 && !REDS.includes(n);
 
-        // حساب السلاسل
-        let streaks = { even: getStreak(hist, isEven), odd: getStreak(hist, isOdd), red: getStreak(hist, isRed), black: getStreak(hist, isBlack) };
+        let s = {
+            even: getStreak(hist, isEven),
+            odd: getStreak(hist, isOdd),
+            red: getStreak(hist, isRed),
+            black: getStreak(hist, isBlack)
+        };
 
-        // تحليل الألوان
-        let rCount = hist.filter(isRed).length;
-        let bCount = total - rCount - hist.filter(x => x === 0).length;
-        let colorPredict = "";
-        let colorScore = 0;
-
-        if (streaks.red >= 3) { colorPredict = "انتظر (نمط أحمر)"; colorScore = 0; }
-        else if (streaks.black >= 3) { colorPredict = "انتظر (نمط أسود)"; colorScore = 0; }
-        else if (rCount < bCount) { colorPredict = "أحمر 🔴"; colorScore = (bCount - rCount); }
-        else if (bCount < rCount) { colorPredict = "أسود ⚫"; colorScore = (rCount - bCount); }
+        // تحليل اللون
+        let rP = hist.filter(isRed).length / total;
+        let cMove = "";
+        let cScore = 0;
+        if (s.red >= 3) cMove = "انتظر (أحمر مكرر)";
+        else if (s.black >= 3) cMove = "انتظر (أسود مكرر)";
+        else if (rP < 0.45) { cMove = "أحمر 🔴"; cScore = 1; }
+        else if (rP > 0.55) { cMove = "أسود ⚫"; cScore = 1; }
 
         // تحليل النوع
-        let eCount = hist.filter(isEven).length;
-        let oCount = total - eCount - hist.filter(x => x === 0).length;
-        let typePredict = "";
-        let typeScore = 0;
+        let eP = hist.filter(isEven).length / total;
+        let tMove = "";
+        let tScore = 0;
+        if (s.even >= 3) tMove = "انتظر (زوجي مكرر)";
+        else if (s.odd >= 3) tMove = "انتظر (فردي مكرر)";
+        else if (eP < 0.45) { tMove = "زوجي 🔢"; tScore = 1; }
+        else if (eP > 0.55) { tMove = "فردي 🔢"; tScore = 1; }
 
-        if (streaks.even >= 3) { typePredict = "انتظر (نمط زوجي)"; typeScore = 0; }
-        else if (streaks.odd >= 3) { typePredict = "انتظر (نمط فردي)"; typeScore = 0; }
-        else if (eCount < oCount) { typePredict = "زوجي 🔢"; typeScore = (oCount - eCount); }
-        else if (oCount < eCount) { typePredict = "فردي 🔢"; typeScore = (eCount - oCount); }
+        // الدمج والوزن
+        let finalMove = "اللعبة متوازنة";
+        let finalColor = "#3498db";
 
-        // دمج التوقعات
-        let finalMove = "";
-        if (colorScore > 1 && typeScore > 1) {
-            finalMove = `${colorPredict} + ${typePredict}`;
-            document.getElementById('decisionDisplay').style.borderColor = "#2ecc71"; // فوز محتمل عالي
-        } else if (colorScore > typeScore) {
-            finalMove = colorPredict;
-            document.getElementById('decisionDisplay').style.borderColor = var(--red);
-        } else {
-            finalMove = typePredict;
-            document.getElementById('decisionDisplay').style.borderColor = var(--gold);
-        }
-
-        if (colorScore <= 1 && typeScore <= 1) {
-            finalMove = "اللعبة متوازنة.. انتظر";
-            document.getElementById('decisionDisplay').style.borderColor = "#3498db";
+        if (cScore > 0 && tScore > 0) {
+            finalMove = cMove + " + " + tMove;
+            finalColor = "#2ecc71";
+        } else if (cScore > 0) {
+            finalMove = cMove;
+            finalColor = cMove.includes("أحمر") ? "#e74c3c" : "#ffffff";
+        } else if (tScore > 0) {
+            finalMove = tMove;
+            finalColor = tMove.includes("زوجي") ? "#2ecc71" : "#d4af37";
+        } else if (cMove.includes("انتظر") || tMove.includes("انتظر")) {
+            finalMove = "نمط مستمر.. لا تراهن";
+            finalColor = "#f1c40f";
         }
 
         document.getElementById('nextMove').innerText = finalMove;
-        document.getElementById('strengthVal').innerText = (total > 20 ? "قوية جداً 🔥" : "متوسطة");
-        document.getElementById('kellyVal').innerText = (Math.max(colorScore, typeScore) * 5) + "%";
-        document.getElementById('hist').innerText = "السجل: " + hist.slice(-6).reverse().join(" | ");
+        document.getElementById('decisionDisplay').style.borderColor = finalColor;
+        document.getElementById('hist').innerText = "آخر 5: " + hist.slice(-5).reverse().join(" | ");
     }
+
+    function clearAll() {
+        if(confirm("هل أنت متأكد من مسح جميع البيانات؟")) {
+            state = { history: [], profit: 0 };
+            localStorage.removeItem('roulette_v10_final');
+            refresh();
+            location.reload();
+        }
+    }
+
+    // التشغيل الأول
     refresh();
 </script>
 </body>
