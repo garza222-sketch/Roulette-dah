@@ -3,158 +3,136 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نظام التحليل المالي والإحصائي - برو</title>
+    <title>محلل القرارات الذكي</title>
     <style>
         :root { --gold: #d4af37; --dark: #0a0a0a; --panel: #161616; --green: #2ecc71; --red: #e74c3c; --blue: #3498db; }
-        body { background: var(--dark); color: white; font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; padding: 10px; margin: 0; }
+        body { background: var(--dark); color: white; font-family: sans-serif; display: flex; justify-content: center; padding: 10px; margin: 0; }
+        .app-container { border: 2px solid var(--gold); background: var(--panel); border-radius: 20px; padding: 15px; width: 100%; max-width: 380px; box-shadow: 0 20px 50px rgba(0,0,0,0.9); }
         
-        .main-app {
-            border: 2px solid var(--gold); background: var(--panel); border-radius: 20px;
-            padding: 15px; width: 100%; max-width: 380px; box-shadow: 0 20px 50px rgba(0,0,0,0.9);
+        /* صندوق القرار المباشر */
+        .decision-box { 
+            background: #222; border: 2px solid var(--blue); border-radius: 12px; padding: 15px; 
+            text-align: center; margin-bottom: 15px; animation: pulse 2s infinite;
         }
-
-        /* شاشة الأرباح */
-        .wallet-screen { 
-            background: #000; border: 1px solid #333; border-radius: 12px; padding: 15px; 
-            text-align: center; margin-bottom: 15px; box-shadow: inset 0 0 15px rgba(212, 175, 55, 0.1);
-        }
-        .wallet-value { font-size: 2.2em; font-weight: bold; color: var(--green); transition: 0.3s; }
-        .wallet-label { font-size: 0.8em; color: #666; letter-spacing: 1px; }
+        @keyframes pulse { 0% { box-shadow: 0 0 5px var(--blue); } 50% { box-shadow: 0 0 20px var(--blue); } 100% { box-shadow: 0 0 5px var(--blue); } }
+        .decision-title { font-size: 0.8em; color: #888; margin-bottom: 5px; }
+        .decision-value { font-size: 1.5em; font-weight: bold; color: white; }
 
         .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
-        .card { background: #222; padding: 10px; border-radius: 10px; text-align: center; border: 1px solid #333; }
-        .card-label { font-size: 0.7em; color: #888; display: block; margin-bottom: 5px; }
-        .card-value { font-size: 1em; font-weight: bold; color: var(--gold); }
-
-        .highlight-box { grid-column: span 2; background: #1a252f; border: 1px solid var(--blue); }
+        .stat-card { background: #252525; padding: 10px; border-radius: 8px; text-align: center; border: 1px solid #333; }
+        .label { font-size: 0.7em; color: #aaa; }
+        .value { font-size: 1em; font-weight: bold; color: var(--gold); display: block; }
 
         .input-section { display: flex; gap: 8px; margin-bottom: 15px; }
         input { flex: 1; padding: 15px; border-radius: 10px; border: 1px solid #444; background: #000; color: var(--gold); font-size: 1.3em; text-align: center; }
-        .btn-add { background: var(--gold); color: black; font-weight: bold; border: none; border-radius: 10px; padding: 0 25px; cursor: pointer; }
+        .btn-add { background: var(--gold); color: black; font-weight: bold; border: none; border-radius: 10px; padding: 0 20px; cursor: pointer; }
 
-        .action-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
-        .btn-win { background: var(--green); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; }
-        .btn-loss { background: var(--red); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .profit-bar { background: #000; padding: 10px; border-radius: 8px; text-align: center; margin-bottom: 10px; border: 1px solid #222; }
+        .profit-num { font-size: 1.2em; font-weight: bold; color: var(--green); }
 
-        .history-text { font-size: 0.75em; color: #555; text-align: center; background: #000; padding: 5px; border-radius: 5px; margin-bottom: 10px; }
-        .btn-reset { width: 100%; background: transparent; color: #444; border: 1px solid #333; padding: 8px; border-radius: 5px; font-size: 0.8em; cursor: pointer; }
+        .action-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+        .btn-win { background: var(--green); color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; }
+        .btn-loss { background: var(--red); color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; }
+        .btn-reset { width: 100%; background: transparent; color: #444; border: none; font-size: 0.7em; margin-top: 10px; cursor: pointer; }
     </style>
 </head>
 <body>
 
-<div class="main-app">
-    <div class="wallet-screen">
-        <div class="wallet-label">إجمالي الربح / الخسارة</div>
-        <div class="wallet-value" id="profitDisplay">0.00</div>
+<div class="app-container">
+    <div class="decision-box" id="decisionDisplay">
+        <div class="decision-title">الخيار الموصى به الآن:</div>
+        <div class="decision-value" id="nextMove">أدخل 5 أرقام للتحليل</div>
     </div>
 
     <div class="stats-grid">
-        <div class="card"><span class="card-label">توصية كيلي</span><span class="card-value" id="kellyVal">0%</span></div>
-        <div class="card"><span class="card-label">متتبع الصفر</span><span class="card-value" id="zeroVal">--</span></div>
-        <div class="card highlight-box">
-            <span class="card-label">القطاع الفيزيائي الأكثر نشاطاً</span>
-            <span class="card-value" id="sectorVal" style="color: #3498db;">بانتظار البيانات...</span>
-        </div>
-        <div class="card"><span class="card-label">أحمر / أسود</span><span class="card-value" id="rbVal">0 / 0</span></div>
-        <div class="card"><span class="card-label">قوة الإشارة</span><span class="card-value" id="strengthVal">--</span></div>
+        <div class="stat-card"><span class="label">توصية كيلي</span><span class="value" id="kellyVal">0%</span></div>
+        <div class="stat-card"><span class="label">قوة الإشارة</span><span class="value" id="strengthVal">--</span></div>
+        <div class="stat-card" style="grid-column: span 2;"><span class="label">القطاع النشط</span><span class="value" id="sectorVal">--</span></div>
+    </div>
+
+    <div class="profit-bar">
+        <span style="font-size: 0.8em; color: #666;">إجمالي الربح: </span>
+        <span class="profit-num" id="profitVal">0.00</span>
     </div>
 
     <div class="input-section">
-        <input type="number" id="numInput" placeholder="الرقم الفائز" inputmode="numeric">
-        <button class="btn-add" onclick="registerNum()">إضافة</button>
+        <input type="number" id="numIn" placeholder="الرقم" inputmode="numeric">
+        <button class="btn-add" onclick="pushData()">تسجيل</button>
     </div>
 
     <div class="action-btns">
-        <button class="btn-win" onclick="modProfit(true)">ربح (+)</button>
-        <button class="btn-loss" onclick="modProfit(false)">خسارة (-)</button>
+        <button class="btn-win" onclick="updateMoney(true)">ربح (+)</button>
+        <button class="btn-loss" onclick="updateMoney(false)">خسارة (-)</button>
     </div>
 
-    <div class="history-text" id="histLog">السجل: فارغ</div>
-    <button class="btn-reset" onclick="hardReset()">تصفير شامل للبيانات</button>
+    <div style="font-size: 0.7em; color: #333; text-align: center;" id="hist"></div>
+    <button class="btn-reset" onclick="clearData()">تصفير شامل</button>
 </div>
 
 <script>
-    // الإعدادات الرياضية والقطاعات
-    const SECTORS = {
-        "جيران الصفر (Voisins)": [22, 18, 29, 7, 28, 12, 35, 3, 26, 0, 32, 15, 19, 4, 21, 2, 25],
-        "الثلث (Tier)": [27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33],
-        "الأيتام (Orphelins)": [1, 20, 14, 31, 9, 17, 34, 6]
-    };
-    const RED_NUMS = [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36];
+    const REDS = [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36];
+    const SECTORS = { "Voisins": [22,18,29,7,28,12,35,3,26,0,32,15,19,4,21,2,25], "Tier": [27,13,36,11,30,8,23,10,5,24,16,33], "Orphelins": [1,20,14,31,9,17,34,6] };
 
-    // استعادة البيانات من الذاكرة
-    let appData = JSON.parse(localStorage.getItem('roulette_ultra_v3')) || { history: [], profit: 0 };
+    let state = JSON.parse(localStorage.getItem('roulette_final_v4')) || { history: [], profit: 0 };
 
-    function registerNum() {
-        const input = document.getElementById('numInput');
-        const n = parseInt(input.value);
-        if (isNaN(n) || n < 0 || n > 36) return;
-        
-        appData.history.push(n);
-        input.value = "";
-        syncAndRender();
+    function pushData() {
+        const val = parseInt(document.getElementById('numIn').value);
+        if (isNaN(val) || val < 0 || val > 36) return;
+        state.history.push(val);
+        document.getElementById('numIn').value = "";
+        refresh();
     }
 
-    function modProfit(win) {
-        // حساب مبلغ الرهان بناءً على كيلي (افتراضي 10 وحدات)
-        let betAmount = 10; 
-        if (win) appData.profit += betAmount;
-        else appData.profit -= betAmount;
-        syncAndRender();
+    function updateMoney(win) {
+        let amount = 10; // مبلغ افتراضي للرهان
+        state.profit += win ? amount : -amount;
+        refresh();
     }
 
-    function syncAndRender() {
-        localStorage.setItem('roulette_ultra_v3', JSON.stringify(appData));
-        const history = appData.history;
+    function refresh() {
+        localStorage.setItem('roulette_final_v4', JSON.stringify(state));
+        const history = state.history;
         const total = history.length;
 
-        // 1. تحديث الربح
-        const pDisplay = document.getElementById('profitDisplay');
-        pDisplay.innerText = appData.profit.toFixed(2);
-        pDisplay.style.color = appData.profit >= 0 ? "var(--green)" : "var(--red)";
+        document.getElementById('profitVal').innerText = state.profit.toFixed(2);
+        document.getElementById('profitVal').style.color = state.profit >= 0 ? "var(--green)" : "var(--red)";
 
-        if (total === 0) return;
+        if (total < 5) return;
 
-        // 2. تحليل الألوان والقطاعات
-        const redCount = history.filter(x => RED_NUMS.includes(x)).length;
-        document.getElementById('rbVal').innerText = `${redCount} / ${total - redCount - history.filter(x=>x===0).length}`;
+        // 1. حساب الاحتمالات للتوصية
+        let redCount = history.filter(x => REDS.includes(x)).length;
+        let evenCount = history.filter(x => x !== 0 && x % 2 === 0).length;
+        
+        let pRed = redCount / total;
+        let pEven = evenCount / total;
 
-        // 3. متتبع الصفر
-        let lastZ = history.lastIndexOf(0);
-        document.getElementById('zeroVal').innerText = (lastZ === -1) ? total : (total - 1 - lastZ);
+        let move = "انتظر...";
+        let boxColor = var(--blue);
 
-        // 4. تحليل القطاعات (آخر 15)
-        let sStats = { "جيران الصفر": 0, "الثلث": 0, "الأيتام": 0 };
-        history.slice(-15).forEach(num => {
-            if (SECTORS["جيران الصفر (Voisins)"].includes(num)) sStats["جيران الصفر"]++;
-            else if (SECTORS["الثلث (Tier)"].includes(num)) sStats["الثلث"]++;
-            else if (SECTORS["الأيتام (Orphelins)"].includes(num)) sStats["الأيتام"]++;
-        });
-        let hot = Object.keys(sStats).reduce((a, b) => sStats[a] > sStats[b] ? a : b);
-        document.getElementById('sectorVal').innerText = `${hot} (${sStats[hot]})`;
+        // خوارزمية القرار (توصي بالخيار الذي لم يظهر كثيراً لتعويض الانحراف)
+        if (pRed < 0.45) { move = "اختار: أحمر 🔴"; boxColor = var(--red); }
+        else if (pRed > 0.55) { move = "اختار: أسود ⚫"; boxColor = "white"; }
+        else if (pEven < 0.45) { move = "اختار: زوجي 🔢"; boxColor = var(--green); }
+        else if (pEven > 0.55) { move = "اختار: فردي 🔢"; boxColor = var(--gold); }
 
-        // 5. كيلي وقوة الإشارة
-        if (total >= 5) {
-            let p_red = redCount / total;
-            let kelly = (p_red > 0.55 || p_red < 0.45) ? "12%" : "5%";
-            document.getElementById('kellyVal').innerText = kelly;
-            document.getElementById('strengthVal').innerText = total > 20 ? "عالية" : "متوسطة";
-        }
+        const nextBox = document.getElementById('nextMove');
+        nextBox.innerText = move;
+        document.getElementById('decisionDisplay').style.borderColor = boxColor;
 
-        document.getElementById('histLog').innerText = "آخر الأرقام: " + history.slice(-8).reverse().join(" ← ");
+        // 2. تحديث القطاع
+        let sCount = { "Voisins": 0, "Tier": 0, "Orphelins": 0 };
+        history.slice(-10).forEach(n => { for(let s in SECTORS) if(SECTORS[s].includes(n)) sCount[s]++; });
+        let hot = Object.keys(sCount).reduce((a,b) => sCount[a] > sCount[b] ? a : b);
+        document.getElementById('sectorVal').innerText = hot;
+
+        // 3. القوة وكيلي
+        document.getElementById('strengthVal').innerText = (total > 15 ? "قوية 🔥" : "متوسطة");
+        document.getElementById('kellyVal').innerText = (Math.abs(0.5 - pRed) * 40).toFixed(0) + "%";
+        document.getElementById('hist').innerText = "السجل: " + history.slice(-5).join(" | ");
     }
 
-    function hardReset() {
-        if (confirm("سيتم مسح كافة الأرقام والأرباح المسجلة. هل أنت متأكد؟")) {
-            appData = { history: [], profit: 0 };
-            syncAndRender();
-            location.reload();
-        }
-    }
-
-    // تشغيل العرض الأولي
-    syncAndRender();
+    function clearData() { if(confirm("تصفير؟")) { state={history:[], profit:0}; refresh(); location.reload(); } }
+    refresh();
 </script>
-
 </body>
 </html>
