@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام التحليل الإحصائي المتقدم</title>
+    <style>
+        :root { --gold: #d4af37; --dark: #0f0f0f; --panel: #1a1a1a; --green: #27ae60; --red: #e74c3c; --blue: #3498db; }
+        body { background: var(--dark); color: white; font-family: 'Segoe UI', Tahoma, sans-serif; display: flex; justify-content: center; padding: 10px; margin: 0; }
+        
+        .app-container {
+            border: 2px solid var(--gold); background: var(--panel); border-radius: 15px;
+            padding: 15px; width: 100%; max-width: 380px; box-shadow: 0 15px 35px rgba(0,0,0,0.8);
+        }
+
+        .prediction-header { 
+            background: var(--green); color: white; padding: 12px; border-radius: 10px; 
+            text-align: center; font-weight: bold; margin-bottom: 15px; font-size: 1.1em;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.2); transition: 0.5s;
+        }
+
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .stat-card { background: #252525; padding: 10px; border-radius: 8px; text-align: center; border: 1px solid #333; }
+        .label { font-size: 0.75em; color: #aaa; display: block; margin-bottom: 4px; }
+        .value { font-size: 1.1em; font-weight: bold; color: var(--gold); }
+
+        .sector-box { 
+            grid-column: span 2; background: #2c3e50; padding: 10px; border-radius: 8px; 
+            text-align: center; border: 1px solid #34495e; margin-bottom: 5px;
+        }
+
+        .zero-tracker {
+            grid-column: span 2; background: #000; border: 1px dashed var(--blue);
+            padding: 8px; border-radius: 8px; text-align: center; margin-bottom: 10px;
+        }
+
+        .input-area { display: flex; gap: 10px; margin-bottom: 15px; }
+        input[type="number"] { 
+            flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #444; 
+            background: #000; color: var(--gold); font-size: 1.2em; text-align: center;
+        }
+        
+        .btn-add { background: var(--gold); color: black; font-weight: bold; padding: 0 25px; border: none; border-radius: 8px; cursor: pointer; }
+        .btn-add:active { transform: scale(0.95); }
+
+        .history-bar { font-size: 0.8em; color: #888; background: #000; padding: 8px; border-radius: 5px; text-align: center; overflow-x: auto; white-space: nowrap; margin-bottom: 10px; }
+        .btn-reset { width: 100%; background: transparent; color: var(--red); border: 1px solid var(--red); padding: 8px; border-radius: 6px; font-size: 0.85em; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <div class="prediction-header" id="predictTxt">أدخل 5 أرقام للبدء</div>
+    
+    <div class="stats-grid">
+        <div class="stat-card"><span class="label">الأحمر / الأسود</span><span class="value" id="rbPerc">0% / 0%</span></div>
+        <div class="stat-card"><span class="label">إدارة المخاطر (كيلي)</span><span class="value" id="kellyPerc">0%</span></div>
+        
+        <div class="sector-box">
+            <span class="label">القطاع الفيزيائي النشط (آخر 15 جولة)</span>
+            <span class="value" id="sectorTxt" style="color: #ecf0f1;">بانتظار البيانات...</span>
+        </div>
+
+        <div class="zero-tracker">
+            <span class="label" style="color: var(--blue);">متتبع الصفر (0)</span>
+            <span class="value" id="zeroTxt" style="color: white;">لم يظهر بعد</span>
+        </div>
+
+        <div class="stat-card"><span class="label">زوجي / فردي</span><span class="value" id="evenOddPerc">0% / 0%</span></div>
+        <div class="stat-card"><span class="label">قوة النمط</span><span class="value" id="strength">--</span></div>
+    </div>
+
+    <div class="input-area">
+        <input type="number" id="numIn" placeholder="الرقم" inputmode="numeric">
+        <button class="btn-add" onclick="addData()">إضافة</button>
+    </div>
+
+    <div class="history-bar" id="hist">السجل: فارغ</div>
+    <button class="btn-reset" onclick="resetAll()">مسح الجلسة والبدء من جديد</button>
+</div>
+
+<script>
+    const SECTORS = {
+        "Voisins (جيران الصفر)": [22, 18, 29, 7, 28, 12, 35, 3, 26, 0, 32, 15, 19, 4, 21, 2, 25],
+        "Tier (الثلث المقابل)": [27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33],
+        "Orphelins (الأيتام)": [1, 20, 14, 31, 9, 17, 34, 6]
+    };
+    const REDS = [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36];
+
+    let history = JSON.parse(localStorage.getItem('roulette_pro_v2')) || [];
+
+    function addData() {
+        const input = document.getElementById('numIn');
+        const n = parseInt(input.value);
+        if (isNaN(n) || n < 0 || n > 36) return;
+        history.push(n);
+        localStorage.setItem('roulette_pro_v2', JSON.stringify(history));
+        input.value = "";
+        render();
+    }
+
+    function render() {
+        if (history.length === 0) return;
+        const total = history.length;
+        const redCount = history.filter(x => REDS.includes(x)).length;
+        const zeros = history.filter(x => x === 0).length;
+        const blackCount = total - redCount - zeros;
+        const evenCount = history.filter(x => x !== 0 && x % 2 === 0).length;
+
+        // 1. الأساسيات
+        document.getElementById('rbPerc').innerText = `${Math.round(redCount/total*100)}% / ${Math.round(blackCount/total*100)}%`;
+        document.getElementById('evenOddPerc').innerText = `${Math.round(evenCount/total*100)}% / ${Math.round((total-evenCount)/total*100)}%`;
+
+        // 2. تتبع الصفر
+        let lastZero = history.lastIndexOf(0);
+        let sinceZero = (lastZero === -1) ? total : (total - 1 - lastZero);
+        document.getElementById('zeroTxt').innerText = `منذ ${sinceZero} جولة`;
+
+        // 3. القطاعات
+        let secStats = { "Voisins": 0, "Tier": 0, "Orphelins": 0 };
+        history.slice(-15).forEach(num => {
+            if (SECTORS["Voisins (جيران الصفر)"].includes(num)) secStats["Voisins"]++;
+            else if (SECTORS["Tier (الثلث المقابل)"].includes(num)) secStats["Tier"]++;
+            else if (SECTORS["Orphelins (الأيتام)"].includes(num)) secStats["Orphelins"]++;
+        });
+        let hot = Object.keys(secStats).reduce((a, b) => secStats[a] > secStats[b] ? a : b);
+        document.getElementById('sectorTxt').innerText = `${hot} (${secStats[hot]} مرات)`;
+
+        // 4. التوقع ومعيار كيلي
+        if (total >= 5) {
+            let p_red = redCount / total;
+            let header = document.getElementById('predictTxt');
+            if (p_red < 0.42) { 
+                header.innerText = "توقع: أحمر (فرصة تعويض)";
+                header.style.background = "var(--red)";
+                let risk = ((1 * (1-p_red) - p_red) / 1) * 100;
+                document.getElementById('kellyPerc').innerText = (risk > 0 ? risk.toFixed(0) : 0) + "%";
+            } else if (p_red > 0.58) {
+                header.innerText = "توقع: أسود (فرصة تعويض)";
+                header.style.background = "black";
+                let risk = ((1 * p_red - (1-p_red)) / 1) * 100;
+                document.getElementById('kellyPerc').innerText = (risk > 0 ? risk.toFixed(0) : 0) + "%";
+            } else {
+                header.innerText = "النمط مستقر";
+                header.style.background = "var(--green)";
+                document.getElementById('kellyPerc').innerText = "0%";
+            }
+            document.getElementById('strength').innerText = total > 25 ? "عالية" : "متوسطة";
+        }
+
+        document.getElementById('hist').innerText = "السجل: " + history.slice(-8).reverse().join(" ← ");
+    }
+
+    function resetAll() {
+        if (confirm("هل تريد مسح البيانات؟")) {
+            history = [];
+            localStorage.removeItem('roulette_pro_v2');
+            location.reload();
+        }
+    }
+    render();
+</script>
+</body>
+</html>
